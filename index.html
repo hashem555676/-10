@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>تقويم الحجوزات</title>
+    <style>
+        /* الأنماط الأساسية */
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            direction: rtl;
+            background-color: #f0f8ff;
+            color: #2c3e50;
+            margin: 0;
+            padding: 10px;
+        }
+
+        .calendar-container, .task-container, .daily-tasks-container {
+            margin: 15px auto;
+            max-width: 1000px;
+            padding: 15px;
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            background-color: #eaf6ff;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.15);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            border: 1px solid #3498db;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        th {
+            background-color: #2c3e50;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        td {
+            background-color: #f8fcff;
+        }
+
+        td:hover {
+            background-color: #d4eaff;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #2c3e50;
+            color: #ffffff;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .header button {
+            padding: 8px 15px;
+            font-size: 14px;
+            background-color: #3498db;
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .task-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .task-form input {
+            padding: 10px;
+            border: 1px solid #3498db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .task-form button {
+            grid-column: 1 / -1;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .task-list li, .daily-tasks-list li {
+            margin: 10px 0;
+            padding: 15px;
+            border: 1px solid #3498db;
+            background-color: #f8fcff;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .delete-btn {
+            position: absolute;
+            left: 15px;
+            bottom: 15px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+
+        /* أنماط جديدة */
+        .booked-day {
+            background-color: #ffeb3b !important;
+            font-weight: bold;
+        }
+        
+        .expired-day {
+            background-color: #e0e0e0 !important;
+            color: #9e9e9e !important;
+            pointer-events: none;
+        }
+
+        /* تحسينات للهواتف */
+        @media (max-width: 768px) {
+            .calendar-container, .task-container, .daily-tasks-container {
+                padding: 10px;
+                margin: 10px auto;
+                width: 95%;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px;
+                min-width: 30px;
+            }
+
+            .header {
+                flex-direction: column;
+            }
+
+            .header button {
+                width: 100%;
+            }
+
+            .task-form {
+                grid-template-columns: 1fr;
+            }
+
+            .delete-btn {
+                position: relative;
+                left: 0;
+                bottom: 0;
+                margin-top: 10px;
+                width: 100%;
+            }
+        }
+
+        /* تحسينات للشاشات الصغيرة جدًا */
+        @media (max-width: 480px) {
+            th, td {
+                padding: 6px;
+                font-size: 12px;
+            }
+
+            .task-form input {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calendar-container">
+        <div class="header">
+            <button onclick="prevMonth()">الشهر السابق</button>
+            <h2 id="monthYear"></h2>
+            <button onclick="nextMonth()">الشهر التالي</button>
+        </div>
+        <div class="total-amount" id="totalAmount">المجموع الشهري: 0.00 دينار</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>الأحد</th>
+                    <th>الإثنين</th>
+                    <th>الثلاثاء</th>
+                    <th>الأربعاء</th>
+                    <th>الخميس</th>
+                    <th>الجمعة</th>
+                    <th>السبت</th>
+                </tr>
+            </thead>
+            <tbody id="calendarBody"></tbody>
+        </table>
+    </div>
+
+    <div class="task-container">
+        <h3>إدارة الحجوزات</h3>
+        <p id="selectedDate">اختر يوماً لإضافة الحجز</p>
+        <div class="task-form">
+            <input id="clientName" type="text" placeholder="اسم العميل (اختياري)">
+            <input id="totalAmountInput" type="number" placeholder="المبلغ الكلي (دينار)">
+            <input id="deposit" type="number" placeholder="المبلغ المدفوع (دينار)">
+            <input id="startTime" type="time" placeholder="وقت البدء">
+            <input id="endTime" type="time" placeholder="وقت الانتهاء">
+            <button onclick="addTask()">إضافة الحجز</button>
+        </div>
+        <ul id="taskList" class="task-list"></ul>
+    </div>
+
+    <div class="daily-tasks-container">
+        <h3>جميع الحجوزات</h3>
+        <ul id="dailyTasksList" class="daily-tasks-list"></ul>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        let tasks = {};
+
+        function loadTasks() {
+            const savedTasks = localStorage.getItem('tasks');
+            if (savedTasks) {
+                tasks = JSON.parse(savedTasks);
+                updateTotalAmount();
+            }
+        }
+
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            updateTotalAmount();
+        }
+
+        function updateTotalAmount() {
+            const total = Object.values(tasks).reduce((acc, dayTasks) => 
+                acc + dayTasks.reduce((dayAcc, task) => 
+                    dayAcc + (Number(task.totalAmount) || 0), 0), 0);
+            document.getElementById('totalAmount').textContent = 
+                `المجموع الشهري: ${total.toFixed(2)} دينار`;
+        }
+
+        function renderCalendar() {
+            const monthYear = document.getElementById('monthYear');
+            const calendarBody = document.getElementById('calendarBody');
+            const monthNames = [
+                "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+                "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+            ];
+
+            const today = new Date();
+            const currentMonth = currentDate.getMonth();
+            const currentYear = currentDate.getFullYear();
+
+            currentDate.setDate(1);
+            const firstDayIndex = currentDate.getDay();
+            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const prevLastDay = new Date(currentYear, currentMonth, 0).getDate();
+
+            monthYear.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+            calendarBody.innerHTML = "";
+
+            let days = "";
+            for (let i = firstDayIndex; i > 0; i--) {
+                days += `<td class="prev-date">${prevLastDay - i + 1}</td>`;
+            }
+
+            for (let i = 1; i <= lastDay; i++) {
+                const cellDate = new Date(currentYear, currentMonth, i);
+                const isPast = cellDate < today;
+                const hasBookings = tasks[`${i}-${currentMonth + 1}-${currentYear}`]?.length > 0;
+                
+                let cellClass = '';
+                if (isPast) cellClass = 'expired-day';
+                else if (hasBookings) cellClass = 'booked-day';
+
+                days += `<td onclick="selectDate(${i})" class="${cellClass}">${i}</td>`;
+                if ((i + firstDayIndex) % 7 === 0) days += "</tr><tr>";
+            }
+
+            calendarBody.innerHTML = `<tr>${days}</tr>`;
+            highlightToday();
+        }
+
+        function highlightToday() {
+            const today = new Date();
+            if (currentDate.getMonth() === today.getMonth() && 
+                currentDate.getFullYear() === today.getFullYear()) {
+                const cells = document.querySelectorAll('td');
+                cells.forEach(cell => {
+                    if (parseInt(cell.textContent) === today.getDate() && 
+                        !cell.classList.contains('booked-day') &&
+                        !cell.classList.contains('expired-day')) {
+                        cell.style.backgroundColor = '#b3d9ff';
+                    }
+                });
+            }
+        }
+
+        function selectDate(day) {
+            const selectedDate = document.getElementById('selectedDate');
+            const fullDate = `${day}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+            selectedDate.textContent = `الحجوزات ليوم ${fullDate}`;
+            selectedDate.dataset.date = fullDate;
+
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = tasks[fullDate] ? tasks[fullDate].map((task, index) => 
+                `<li>
+                    ${task.clientName ? `<strong>العميل:</strong> ${task.clientName}<br>` : ''}
+                    ${task.totalAmount ? `<strong>المبلغ الكلي:</strong> ${task.totalAmount} دينار<br>` : ''}
+                    ${task.deposit ? `<strong>المدفوع:</strong> ${task.deposit} دينار<br>` : ''}
+                    ${task.startTime ? `<strong>البداية:</strong> ${task.startTime}<br>` : ''}
+                    ${task.endTime ? `<strong>النهاية:</strong> ${task.endTime}` : ''}
+                    <button class="delete-btn" onclick="deleteTask('${fullDate}', ${index})">حذف</button>
+                </li>`
+            ).join('') : '<p>لا توجد حجوزات لهذا اليوم.</p>';
+        }
+
+        function addTask() {
+            const selectedDate = document.getElementById('selectedDate').dataset.date;
+            if (!selectedDate) return alert("يرجى اختيار تاريخ أولاً!");
+
+            const [day, month, year] = selectedDate.split('-');
+            const taskDate = new Date(year, month - 1, day);
+            const today = new Date();
+            
+            if (taskDate < today) {
+                return alert("لا يمكن إضافة حجوزات لتواريخ منتهية!");
+            }
+
+            const taskData = {
+                clientName: document.getElementById('clientName').value.trim() || undefined,
+                totalAmount: document.getElementById('totalAmountInput').value || 0,
+                deposit: document.getElementById('deposit').value || 0,
+                startTime: document.getElementById('startTime').value || undefined,
+                endTime: document.getElementById('endTime').value || undefined
+            };
+
+            if (!tasks[selectedDate]) tasks[selectedDate] = [];
+            tasks[selectedDate].push(taskData);
+
+            ['clientName', 'totalAmountInput', 'deposit', 'startTime', 'endTime']
+                .forEach(id => document.getElementById(id).value = '');
+
+            updateDisplay();
+            saveTasks();
+        }
+
+        function updateDisplay() {
+            selectDate(new Date(selectedDate).getDate());
+            renderDailyTasks();
+            renderCalendar();
+        }
+
+        function deleteTask(date, index) {
+            tasks[date].splice(index, 1);
+            if (tasks[date].length === 0) delete tasks[date];
+            updateDisplay();
+            saveTasks();
+        }
+
+        function renderDailyTasks() {
+            const dailyTasksList = document.getElementById('dailyTasksList');
+            dailyTasksList.innerHTML = Object.keys(tasks).map(date => 
+                tasks[date].map((task, index) => `
+                    <li>
+                        <strong>التاريخ:</strong> ${date}<br>
+                        ${task.clientName ? `<strong>العميل:</strong> ${task.clientName}<br>` : ''}
+                        ${task.totalAmount > 0 ? `<strong>المبلغ الكلي:</strong> ${task.totalAmount} دينار<br>` : ''}
+                        ${task.deposit > 0 ? `<strong>المدفوع:</strong> ${task.deposit} دينار<br>` : ''}
+                        ${task.startTime ? `<strong>البداية:</strong> ${task.startTime}<br>` : ''}
+                        ${task.endTime ? `<strong>النهاية:</strong> ${task.endTime}` : ''}
+                        <button class="delete-btn" onclick="deleteTask('${date}', ${index})">حذف</button>
+                    </li>`
+                ).join('')
+            ).join('') || "<p>لا توجد حجوزات حتى الآن.</p>";
+        }
+
+        function prevMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        }
+
+        window.onload = function () {
+            currentDate = new Date();
+            loadTasks();
+            renderCalendar();
+            renderDailyTasks();
+        };
+    </script>
+</body>
+</html>
